@@ -1,345 +1,252 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Whisper In The Dark - mrhachimi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Serif+TC:wght@400;500&display=swap');
-        
-        :root { --spotify-green: #22c55e; }
-        
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            margin: 0; padding: 0;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .chinese { font-family: 'Noto Serif TC', serif; }
-        .bg-image {
-            background-image: url('bg.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-        }
-        .overlay {
-            background: linear-gradient(to bottom, rgba(0,0,0,0.28), rgba(0,0,0,0.62));
-            position: fixed;
-            inset: 0;
-            z-index: 1;
-        }
-        .glass {
-            background: rgba(15, 23, 42, 0.68);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-        }
-        .album-art {
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        
-        .playing .album-art {
-            animation: rotate 28s linear infinite;
-        }
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        .lyrics-container {
-            scrollbar-width: thin;
-            scrollbar-color: #22c55e #334155;
-            -webkit-overflow-scrolling: touch;
-        }
-        
-        .lyrics-container::-webkit-scrollbar { width: 5px; }
-        .lyrics-container::-webkit-scrollbar-thumb {
-            background: #22c55e;
-            border-radius: 20px;
-        }
-        .stanza {
-            opacity: 0.75;
-            transition: all 0.4s ease;
-            padding: 8px 12px;
-            border-radius: 12px;
-        }
-        
-        .stanza:hover {
-            opacity: 0.9;
-            transform: translateX(6px);
-        }
-        
-        .stanza.active {
-            opacity: 1;
-            background: rgba(34, 197, 94, 0.15);
-            border-left: 4px solid #22c55e;
-            transform: translateX(4px);
-        }
-        
-        .stanza.active p {
-            color: #f1f5f9;
-            font-weight: 500;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Whisper In The Dark - mrhachimi</title>
 
-        @media (max-width: 1024px) {
-            .lyrics-container::-webkit-scrollbar { display: none; }
-        }
-    </style>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Serif+TC:wght@400;500&display=swap');
+
+body{margin:0;font-family:'Inter',system-ui;background:black;color:white}
+.chinese{font-family:'Noto Serif TC',serif}
+.bg-image{background:url('bg.jpg') center/cover no-repeat fixed;position:fixed;inset:0;z-index:0}
+.overlay{position:fixed;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.3),rgba(0,0,0,.7));z-index:1}
+.glass{background:rgba(15,23,42,.7);backdrop-filter:blur(20px)}
+.album-art{transition:.4s}
+.album-art.playing{animation:spin 28s linear infinite}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.stanza{opacity:.7;transition:.3s;padding:8px 12px;border-radius:12px}
+.stanza.active{opacity:1;background:rgba(34,197,94,.15);border-left:4px solid #22c55e}
+.lyrics-container{scrollbar-width:thin}
+.lyrics-container::-webkit-scrollbar{width:5px}
+.lyrics-container::-webkit-scrollbar-thumb{background:#22c55e;border-radius:20px}
+</style>
 </head>
-<body class="bg-black text-white min-h-screen overflow-hidden">
-    <div class="bg-image"></div>
-    <div class="overlay"></div>
-    <div class="relative z-10 min-h-screen flex items-center justify-center p-6">
-        <div class="max-w-7xl mx-auto w-full">
-            <div class="flex flex-col lg:flex-row gap-8 items-start">
-                
-                <div class="lg:w-[26%] flex flex-col items-center lg:items-start text-center lg:text-left">
-                    <div id="album-container" class="album-art w-56 h-56 lg:w-64 lg:h-64 rounded-3xl overflow-hidden shadow-2xl border-4 border-white/10 bg-zinc-900">
-                        <img id="cover" src="avatar.jpg" alt="mrhachimi" class="w-full h-full object-cover">
-                    </div>
-                    
-                    <div class="mt-8 w-full max-w-xs">
-                        <h1 class="text-4xl font-bold tracking-tighter">Whisper In The Dark</h1>
-                        <p class="text-xl text-zinc-400 mt-2 flex items-center gap-2 justify-center lg:justify-start">
-                            <i class="fa-solid fa-user text-emerald-500"></i>
-                            mrhachimi
-                        </p>
-                    </div>
-                    <button onclick="toggleLike(this)" class="mt-8 text-3xl text-white/60 hover:text-red-500 transition-all active:scale-125">
-                        <i class="fa-solid fa-heart"></i>
-                    </button>
-                </div>
 
-                <div class="lg:w-[27%] glass rounded-3xl p-8 border border-white/10 shadow-2xl flex flex-col justify-center">
-                    <div class="mb-8">
-                        <div class="flex justify-between text-xs text-zinc-400 mb-1">
-                            <span id="current-time">0:00</span>
-                            <span id="duration">0:00</span>
-                        </div>
-                        <input type="range" id="progress" class="w-full accent-emerald-500 bg-white/25 h-1 rounded-full cursor-pointer" min="0" max="100" value="0">
-                    </div>
-                    <div class="flex items-center justify-center gap-6 mb-8">
-                        <button onclick="toggleShuffle()" class="text-2xl text-white/60 hover:text-white transition-colors">
-                            <i class="fa-solid fa-shuffle"></i>
-                        </button>
-                        <button onclick="prevTrack()" class="text-3xl text-white/80 hover:text-white transition-colors">
-                            <i class="fa-solid fa-backward-step"></i>
-                        </button>
-                        
-                        <button id="play-btn" onclick="togglePlay()" class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-black text-3xl shadow-xl hover:scale-110 active:scale-95 transition-all">
-                            <i id="play-icon" class="fa-solid fa-play ml-0.5"></i>
-                        </button>
-                        
-                        <button onclick="nextTrack()" class="text-3xl text-white/80 hover:text-white transition-colors">
-                            <i class="fa-solid fa-forward-step"></i>
-                        </button>
-                        <button onclick="toggleRepeat()" class="text-2xl text-white/60 hover:text-white transition-colors">
-                            <i id="repeat-icon" class="fa-solid fa-repeat"></i>
-                        </button>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-volume-low text-zinc-400"></i>
-                        <input type="range" id="volume" class="flex-1 accent-emerald-500 bg-white/25 h-1 rounded-full cursor-pointer" min="0" max="100" value="80">
-                        <i class="fa-solid fa-volume-high text-zinc-400"></i>
-                    </div>
-                </div>
+<body class="min-h-screen overflow-hidden">
 
-                <div class="lg:w-[47%] glass rounded-3xl p-8 border border-white/10 flex flex-col h-[560px]">
-                    <div class="flex items-center justify-between mb-6">
-                        <div class="flex items-center gap-3">
-                            <i class="fa-solid fa-music text-emerald-500 text-2xl"></i>
-                            <h3 class="font-semibold text-xl">歌詞 - 中英對照</h3>
-                        </div>
-                        <span class="text-xs px-4 py-1 bg-emerald-500/20 text-emerald-400 rounded-full">mrhachimi</span>
-                    </div>
-                    
-                    <div id="lyrics-scroll" class="lyrics-container flex-1 overflow-y-auto pr-4 space-y-12 text-[17px] leading-relaxed">
-                        <div class="stanza" data-start="16">
-                            <p class="font-medium">Tangled up in empty sheets</p>
-                            <p class="font-medium">A million miles between heartbeats</p>
-                            <p class="font-medium">We say the words but kill the sound</p>
-                            <p class="font-medium">Just waiting till we hit the ground</p>
-                            <p class="chinese text-emerald-200/95 mt-5">糾纏在空蕩的枕衾，</p>
-                            <p class="chinese text-emerald-200/95">心跳之間是萬里的荒蕪。</p>
-                            <p class="chinese text-emerald-200/95">我們吐露著話語, 卻親手扼殺了迴響，</p>
-                            <p class="chinese text-emerald-200/95">只是靜靜等待墜地那一刻的荒涼。</p>
-                        </div>
-                        <div class="stanza" data-start="30">
-                            <p class="font-medium">I can feel the static in the air</p>
-                            <p class="font-medium">Hanging by a thread we didn’t share</p>
-                            <p class="font-medium">Is it love or just the fear?</p>
-                            <p class="chinese text-emerald-200/95 mt-5">我能感覺到空氣中焦灼的靜電，</p>
-                            <p class="chinese text-emerald-200/95">懸於一線，那線頭卻不曾交疊。</p>
-                            <p class="chinese text-emerald-200/95">這究竟是愛，抑或只是恐懼？</p>
-                        </div>
-                        <div class="stanza" data-start="44">
-                            <p class="font-medium">Are we holding on just to feel something?!</p>
-                            <p class="font-medium">Terrified of the quiet, the nothing!</p>
-                            <p class="font-medium">Drowning in the noise to escape the truth</p>
-                            <p class="font-medium">Burning through the wreckage of our youth!</p>
-                            <p class="chinese text-emerald-200/95 mt-5">難道我們緊握不放只為證明自己還有知覺？</p>
-                            <p class="chinese text-emerald-200/95">如此恐懼啊這死寂，這虛無！</p>
-                            <p class="chinese text-emerald-200/95">在喧囂中溺斃，只為逃離真相，</p>
-                            <p class="chinese text-emerald-200/95">在青春的殘骸裡，燃盡最後的光火。</p>
-                        </div>
-                        <div class="stanza" data-start="77">
-                            <p class="font-medium">Just a whisper in the dark...</p>
-                            <p class="font-medium">Are we afraid to fall apart?</p>
-                            <p class="font-medium">Just a little something</p>
-                            <p class="font-medium">almost whisper in the dark…</p>
-                            <p class="chinese text-emerald-200/95 mt-5">不過是暗夜裡的一聲呢喃...</p>
-                            <p class="chinese text-emerald-200/95">我們是否竟如此害怕分崩離析？</p>
-                            <p class="chinese text-emerald-200/95">那微小的、幾乎在黑暗中消散的低語...</p>
-                        </div>
-                        <div class="stanza" data-start="105">
-                            <p class="font-medium">Just a whisper in the dark...</p>
-                            <p class="font-medium">Are we afraid to fall apart?</p>
-                            <p class="font-medium">Just to feel something...</p>
-                            <p class="font-medium">The quiet, the nothing…</p>
-                            <p class="chinese text-emerald-200/95 mt-5">不過是暗夜裡的一聲呢喃...</p>
-                            <p class="chinese text-emerald-200/95">我們是否竟如此害怕分崩離析？</p>
-                            <p class="chinese text-emerald-200/95">只為了一絲知覺... 那死寂，那虛無。</p>
-                        </div>
-                        <div class="stanza" data-start="135">
-                            <p class="font-medium">Just a ah……something ah….</p>
-                            <p class="font-medium">Just a whisper …. Let out …</p>
-                            <p class="chinese text-emerald-200/95 mt-5">那聲... 破碎的嘆息...</p>
-                            <p class="chinese text-emerald-200/95">那聲... 被釋放的呢喃...</p>
-                        </div>
-                        <div class="stanza" data-start="152">
-                            <p class="font-medium">Smooth clean finished</p>
-                            <p class="font-medium">And Crying lonely ….ah…..</p>
-                            <p class="chinese text-emerald-200/95 mt-5">收尾得如此圓潤乾淨徹底。</p>
-                            <p class="chinese text-emerald-200/95">徒留寂寞在低泣...</p>
-                        </div>
-                        <div class="stanza" data-start="171">
-                            <p class="font-medium">Just a whisper in the dark...</p>
-                            <p class="font-medium">Are we afraid to fall apart?</p>
-                            <p class="font-medium">Just to feel something...</p>
-                            <p class="font-medium">The quiet, the nothing…</p>
-                            <p class="chinese text-emerald-200/95 mt-5">不過是暗夜裡的一聲呢喃...</p>
-                            <p class="chinese text-emerald-200/95">我們是否竟如此害怕分崩離析？</p>
-                            <p class="chinese text-emerald-200/95">只為了一絲知覺... 那死寂，那虛無。</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 glass px-7 py-3.5 rounded-3xl flex items-center gap-4 border border-white/10 text-sm shadow-xl">
-        <span class="text-emerald-400 text-xl">♫</span>
-        <span class="font-medium">現在播放</span>
-        <div class="h-px w-8 bg-white/30"></div>
-        <span class="text-white/70">Whisper In The Dark • mrhachimi</span>
-    </div>
+<div class="bg-image"></div>
+<div class="overlay"></div>
 
-    <audio id="audio" src="audio.mp3" preload="auto" playsinline></audio>
+<div class="relative z-10 min-h-screen flex items-center justify-center p-6">
+<div class="max-w-7xl mx-auto w-full">
+<div class="flex flex-col lg:flex-row gap-8 items-start">
 
-    <script>
-        const audio = document.getElementById('audio');
-        const playBtn = document.getElementById('play-btn');
-        const playIcon = document.getElementById('play-icon');
-        const progress = document.getElementById('progress');
-        const currentTimeEl = document.getElementById('current-time');
-        const durationEl = document.getElementById('duration');
-        const volumeSlider = document.getElementById('volume');
-        const albumContainer = document.getElementById('album-container');
-        const stanzas = document.querySelectorAll('.stanza');
-        
-        let isPlaying = false;
-        let currentActive = -1;
-        let isInitialized = false;
+<!-- 左側 -->
+<div class="lg:w-[26%] flex flex-col items-center text-center">
+<div id="album" class="album-art w-56 h-56 lg:w-64 lg:h-64 rounded-3xl overflow-hidden shadow-2xl border-4 border-white/10 bg-zinc-900">
+<img src="avatar.jpg" class="w-full h-full object-cover">
+</div>
+<div class="mt-8 w-full max-w-xs">
+<h1 class="text-4xl font-bold tracking-tighter">Whisper In The Dark</h1>
+<p class="text-xl text-zinc-400 mt-2">mrhachimi</p>
+</div>
+</div>
 
-        function formatTime(seconds) {
-            if (!seconds || isNaN(seconds)) return '0:00';
-            const min = Math.floor(seconds / 60);
-            const sec = Math.floor(seconds % 60);
-            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
-        }
+<!-- 中間播放 -->
+<div class="lg:w-[27%] glass rounded-3xl p-8 border border-white/10 shadow-2xl flex flex-col justify-center">
 
-        async function togglePlay() {
-            try {
-                // 手機端解鎖關鍵：首次點擊必須觸發 load()
-                if (!isInitialized) {
-                    audio.load();
-                    isInitialized = true;
-                }
+<div class="mb-8">
+<div class="flex justify-between text-xs text-zinc-400 mb-1">
+<span id="current-time">0:00</span>
+<span id="duration">0:00</span>
+</div>
+<input type="range" id="progress" min="0" max="100" value="0"
+class="w-full accent-emerald-500 bg-white/25 h-1 rounded-full">
+</div>
 
-                if (audio.paused) {
-                    const playPromise = audio.play();
-                    if (playPromise !== undefined) {
-                        await playPromise;
-                        isPlaying = true;
-                        playIcon.classList.replace('fa-play', 'fa-pause');
-                        albumContainer.classList.add('playing');
-                    }
-                } else {
-                    audio.pause();
-                    isPlaying = false;
-                    playIcon.classList.replace('fa-pause', 'fa-play');
-                    albumContainer.classList.remove('playing');
-                }
-            } catch (err) {
-                console.error("播放攔截:", err);
-            }
-        }
+<div class="flex items-center justify-center gap-6 mb-8">
+<button id="play-btn"
+class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-black text-3xl shadow-xl">
+<i id="play-icon" class="fa-solid fa-play"></i>
+</button>
+</div>
 
-        audio.addEventListener('timeupdate', () => {
-            if (!audio.duration) return;
-            const percent = (audio.currentTime / audio.duration) * 100;
-            progress.value = percent;
-            currentTimeEl.textContent = formatTime(audio.currentTime);
+<div class="flex items-center gap-3">
+<i class="fa-solid fa-volume-low text-zinc-400"></i>
+<input type="range" id="volume" min="0" max="100" value="80"
+class="flex-1 accent-emerald-500 bg-white/25 h-1 rounded-full">
+<i class="fa-solid fa-volume-high text-zinc-400"></i>
+</div>
 
-            let activeIndex = -1;
-            for (let i = stanzas.length - 1; i >= 0; i--) {
-                const startTime = parseFloat(stanzas[i].dataset.start);
-                if (audio.currentTime >= startTime) {
-                    activeIndex = i;
-                    break;
-                }
-            }
+<audio id="audio" src="audio.mp3" preload="auto" playsinline></audio>
+</div>
 
-            if (activeIndex !== currentActive) {
-                stanzas.forEach(s => s.classList.remove('active'));
-                if (activeIndex >= 0) {
-                    stanzas[activeIndex].classList.add('active');
-                    stanzas[activeIndex].scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center'
-                    });
-                }
-                currentActive = activeIndex;
-            }
-        });
+<!-- 右側歌詞 -->
+<div class="lg:w-[47%] glass rounded-3xl p-8 border border-white/10 flex flex-col h-[560px]">
+<div id="lyrics-scroll" class="lyrics-container flex-1 overflow-y-auto pr-4 space-y-12 text-[17px] leading-relaxed">
 
-        // 偵測檔案加載失敗
-        audio.addEventListener('error', () => {
-            alert("找不到音訊檔案 audio.mp3。請檢查 GitHub 倉庫中的檔案名稱是否完全一致（注意大小寫）！");
-        });
+<!-- Stanza 1 -->
+<div class="stanza" data-start="16">
+<p>Tangled up in empty sheets</p>
+<p>A million miles between heartbeats</p>
+<p>We say the words but kill the sound</p>
+<p>Just waiting till we hit the ground</p>
+<p class="chinese text-emerald-200/95 mt-5">糾纏在空蕩的枕衾，</p>
+<p class="chinese text-emerald-200/95">心跳之間是萬里的荒蕪。</p>
+<p class="chinese text-emerald-200/95">我們吐露著話語, 卻親手扼殺了迴響，</p>
+<p class="chinese text-emerald-200/95">只是靜靜等待墜地那一刻的荒涼。</p>
+</div>
 
-        audio.addEventListener('loadedmetadata', () => {
-            durationEl.textContent = formatTime(audio.duration);
-        });
+<!-- Stanza 2 -->
+<div class="stanza" data-start="30">
+<p>I can feel the static in the air</p>
+<p>Hanging by a thread we didn’t share</p>
+<p>Is it love or just the fear?</p>
+<p class="chinese text-emerald-200/95 mt-5">我能感覺到空氣中焦灼的靜電，</p>
+<p class="chinese text-emerald-200/95">懸於一線，那線頭卻不曾交疊。</p>
+<p class="chinese text-emerald-200/95">這究竟是愛，抑或只是恐懼？</p>
+</div>
 
-        progress.addEventListener('input', () => {
-            if (audio.duration) audio.currentTime = (progress.value / 100) * audio.duration;
-        });
+<!-- Stanza 3 -->
+<div class="stanza" data-start="44">
+<p>Are we holding on just to feel something?!</p>
+<p>Terrified of the quiet, the nothing!</p>
+<p>Drowning in the noise to escape the truth</p>
+<p>Burning through the wreckage of our youth!</p>
+<p class="chinese text-emerald-200/95 mt-5">難道我們緊握不放只為證明自己還有知覺？</p>
+<p class="chinese text-emerald-200/95">如此恐懼啊這死寂，這虛無！</p>
+<p class="chinese text-emerald-200/95">在喧囂中溺斃，只為逃離真相，</p>
+<p class="chinese text-emerald-200/95">在青春的殘骸裡，燃盡最後的光火。</p>
+</div>
 
-        volumeSlider.addEventListener('input', () => {
-            audio.volume = volumeSlider.value / 100;
-        });
+<!-- Stanza 4 -->
+<div class="stanza" data-start="77">
+<p>Just a whisper in the dark...</p>
+<p>Are we afraid to fall apart?</p>
+<p>Just a little something</p>
+<p>almost whisper in the dark…</p>
+<p class="chinese text-emerald-200/95 mt-5">不過是暗夜裡的一聲呢喃...</p>
+<p class="chinese text-emerald-200/95">我們是否竟如此害怕分崩離析？</p>
+<p class="chinese text-emerald-200/95">那微小的、幾乎在黑暗中消散的低語...</p>
+</div>
 
-        function toggleLike(btn) { btn.style.color = btn.style.color ? '' : '#ef4444'; }
-        function toggleRepeat() { audio.loop = !audio.loop; document.getElementById('repeat-icon').style.color = audio.loop ? '#22c55e' : ''; }
-        function toggleShuffle() { console.log("Shuffle clicked"); }
-        function prevTrack() { audio.currentTime = 0; }
-        function nextTrack() { audio.currentTime = audio.duration || 0; }
+<!-- Stanza 5 -->
+<div class="stanza" data-start="105">
+<p>Just a whisper in the dark...</p>
+<p>Are we afraid to fall apart?</p>
+<p>Just to feel something...</p>
+<p>The quiet, the nothing…</p>
+<p class="chinese text-emerald-200/95 mt-5">不過是暗夜裡的一聲呢喃...</p>
+<p class="chinese text-emerald-200/95">我們是否竟如此害怕分崩離析？</p>
+<p class="chinese text-emerald-200/95">只為了一絲知覺... 那死寂，那虛無。</p>
+</div>
 
-        document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); togglePlay(); } });
-        audio.volume = 0.8;
-    </script>
+<!-- Stanza 6 -->
+<div class="stanza" data-start="135">
+<p>Just a ah……something ah….</p>
+<p>Just a whisper …. Let out …</p>
+<p class="chinese text-emerald-200/95 mt-5">那聲... 破碎的嘆息...</p>
+<p class="chinese text-emerald-200/95">那聲... 被釋放的呢喃...</p>
+</div>
+
+<!-- Stanza 7 -->
+<div class="stanza" data-start="152">
+<p>Smooth clean finished</p>
+<p>And Crying lonely ….ah…..</p>
+<p class="chinese text-emerald-200/95 mt-5">收尾得如此圓潤乾淨徹底。</p>
+<p class="chinese text-emerald-200/95">徒留寂寞在低泣...</p>
+</div>
+
+<!-- Stanza 8 -->
+<div class="stanza" data-start="171">
+<p>Just a whisper in the dark...</p>
+<p>Are we afraid to fall apart?</p>
+<p>Just to feel something...</p>
+<p>The quiet, the nothing…</p>
+<p class="chinese text-emerald-200/95 mt-5">不過是暗夜裡的一聲呢喃...</p>
+<p class="chinese text-emerald-200/95">我們是否竟如此害怕分崩離析？</p>
+<p class="chinese text-emerald-200/95">只為了一絲知覺... 那死寂，那虛無。</p>
+</div>
+
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+<script>
+const audio=document.getElementById("audio")
+const playBtn=document.getElementById("play-btn")
+const playIcon=document.getElementById("play-icon")
+const album=document.getElementById("album")
+const progress=document.getElementById("progress")
+const currentTimeEl=document.getElementById("current-time")
+const durationEl=document.getElementById("duration")
+const volumeSlider=document.getElementById("volume")
+const stanzas=document.querySelectorAll(".stanza")
+
+let unlocked=false
+
+// iOS 解鎖
+function unlock(){
+if(unlocked)return
+audio.load()
+unlocked=true
+}
+document.addEventListener("touchstart",unlock,{once:true})
+
+// 播放控制
+playBtn.addEventListener("click",async()=>{
+try{
+if(audio.paused){
+await audio.play()
+playIcon.classList.replace("fa-play","fa-pause")
+album.classList.add("playing")
+}else{
+audio.pause()
+playIcon.classList.replace("fa-pause","fa-play")
+album.classList.remove("playing")
+}
+}catch(e){
+alert("請先點擊畫面一次以啟用音訊")
+}
+})
+
+// 時間格式
+function formatTime(s){
+if(!s)return"0:00"
+let m=Math.floor(s/60)
+let sec=Math.floor(s%60)
+return m+":"+(sec<10?"0":"")+sec
+}
+
+audio.addEventListener("loadedmetadata",()=>{
+durationEl.textContent=formatTime(audio.duration)
+})
+
+audio.addEventListener("timeupdate",()=>{
+if(audio.duration){
+progress.value=(audio.currentTime/audio.duration)*100
+currentTimeEl.textContent=formatTime(audio.currentTime)
+}
+
+let active=-1
+for(let i=stanzas.length-1;i>=0;i--){
+let start=parseFloat(stanzas[i].dataset.start)
+if(audio.currentTime>=start-0.35){active=i;break}
+}
+
+stanzas.forEach(s=>s.classList.remove("active"))
+if(active>=0)stanzas[active].classList.add("active")
+})
+
+progress.addEventListener("input",()=>{
+if(audio.duration)
+audio.currentTime=(progress.value/100)*audio.duration
+})
+
+volumeSlider.addEventListener("input",()=>{
+audio.volume=volumeSlider.value/100
+})
+
+audio.volume=0.8
+</script>
+
 </body>
 </html>
