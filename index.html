@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Whisper In The Dark - mrhachimi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Serif+TC:wght@400;500&display=swap');
+        
+        :root { --spotify-green: #22c55e; }
+        
+        html, body { 
+            height: 100%;
+            overflow-x: hidden;  /* 只防橫向滾動 */
+        }
+        
+        body { 
+            font-family: 'Inter', system-ui, sans-serif; 
+            margin: 0; padding: 0;
+        }
+        .chinese { font-family: 'Noto Serif TC', serif; }
+
+        .bg-image {
+            background-image: url('bg.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+        }
+
+        .overlay {
+            background: linear-gradient(to bottom, rgba(0,0,0,0.28), rgba(0,0,0,0.62));
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+        }
+
+        .glass {
+            background: rgba(15, 23, 42, 0.68);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .album-art {
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        .playing .album-art {
+            animation: rotate 28s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .lyrics-container {
+            scrollbar-width: thin;
+            scrollbar-color: #22c55e #334155;
+        }
+        
+        .lyrics-container::-webkit-scrollbar {
+            width: 5px;
+        }
+        
+        .lyrics-container::-webkit-scrollbar-thumb {
+            background: #22c55e;
+            border-radius: 20px;
+        }
+
+        .stanza {
+            opacity: 0.75;
+            transition: all 0.4s ease;
+            padding: 8px 12px;
+            border-radius: 12px;
+        }
+        
+        .stanza:hover {
+            opacity: 0.9;
+            transform: translateX(6px);
+        }
+        
+        .stanza.active {
+            opacity: 1;
+            background: rgba(34, 197, 94, 0.15);
+            border-left: 4px solid #22c55e;
+            transform: translateX(4px);
+        }
+        
+        .stanza.active p {
+            color: #f1f5f9;
+            font-weight: 500;
+        }
+        
+        button, .w-14, .h-14 {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-black text-white min-h-screen">
+    <div class="bg-image"></div>
+    <div class="overlay"></div>
+
+    <div class="relative z-10 min-h-screen flex items-center justify-center p-6">
+        <div class="max-w-7xl mx-auto w-full">
+
+            <div class="flex flex-col lg:flex-row gap-8 items-start">
+
+                <!-- 左側：頭像（已縮小） -->
+                <div class="lg:w-[26%] flex flex-col items-center lg:items-start text-center lg:text-left">
+                    <div id="album-container" class="album-art w-56 h-56 lg:w-64 lg:h-64 rounded-3xl overflow-hidden shadow-2xl border-4 border-white/10 bg-zinc-900">
+                        <img id="cover" src="avatar.jpg" alt="mrhachimi" class="w-full h-full object-cover">
+                    </div>
+                    
+                    <div class="mt-8 w-full max-w-xs">
+                        <h1 class="text-4xl font-bold tracking-tighter">Whisper In The Dark</h1>
+                        <p class="text-xl text-zinc-400 mt-2 flex items-center gap-2 justify-center lg:justify-start">
+                            <i class="fa-solid fa-user text-emerald-500"></i>
+                            mrhachimi
+                        </p>
+                    </div>
+
+                    <button id="like-btn" class="mt-8 text-3xl text-white/60 hover:text-red-500 transition-all active:scale-125">
+                        <i class="fa-solid fa-heart"></i>
+                    </button>
+                </div>
+
+                <!-- 中間：播放控制（按鈕已縮小） -->
+                <div class="lg:w-[27%] glass rounded-3xl p-8 border border-white/10 shadow-2xl flex flex-col justify-center">
+                    
+                    <div class="mb-8">
+                        <div class="flex justify-between text-xs text-zinc-400 mb-1">
+                            <span id="current-time">0:00</span>
+                            <span id="duration">0:00</span>
+                        </div>
+                        <input type="range" id="progress" 
+                               class="w-full accent-emerald-500 bg-white/25 h-1 rounded-full cursor-pointer" 
+                               min="0" max="100" value="0">
+                    </div>
+
+                    <div class="flex items-center justify-center gap-6 mb-8">
+                        <button id="shuffle-btn" class="text-2xl text-white/60 hover:text-white transition-colors">
+                            <i class="fa-solid fa-shuffle"></i>
+                        </button>
+                        <button id="prev-btn" class="text-3xl text-white/80 hover:text-white transition-colors">
+                            <i class="fa-solid fa-backward-step"></i>
+                        </button>
+                        
+                        <button id="play-btn" 
+                                class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-black text-3xl shadow-xl hover:scale-110 active:scale-95 transition-all">
+                            <i id="play-icon" class="fa-solid fa-play ml-0.5"></i>
+                        </button>
+                        
+                        <button id="next-btn" class="text-3xl text-white/80 hover:text-white transition-colors">
+                            <i class="fa-solid fa-forward-step"></i>
+                        </button>
+                        <button id="repeat-btn" class="text-2xl text-white/60 hover:text-white transition-colors">
+                            <i id="repeat-icon" class="fa-solid fa-repeat"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-volume-low text-zinc-400"></i>
+                        <input type="range" id="volume" 
+                               class="flex-1 accent-emerald-500 bg-white/25 h-1 rounded-full cursor-pointer" 
+                               min="0" max="100" value="80">
+                        <i class="fa-solid fa-volume-high text-zinc-400"></i>
+                    </div>
+
+                    <audio id="audio" src="audio.mp3"></audio>
+                </div>
+
+                <!-- 右側：歌詞（最大區域 + Spotify 式高亮） -->
+                <div class="lg:w-[47%] glass rounded-3xl p-8 border border-white/10 flex flex-col min-h-[300px]">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-music text-emerald-500 text-2xl"></i>
+                            <h3 class="font-semibold text-xl">歌詞 - 中英對照</h3>
+                        </div>
+                        <span class="text-xs px-4 py-1 bg-emerald-500/20 text-emerald-400 rounded-full">mrhachimi</span>
+                    </div>
+                    
+                    <div id="lyrics-scroll" class="lyrics-container flex-1 overflow-y-auto pr-4 space-y-12 text-[17px] leading-relaxed min-h-[200px]">
+                        
+                        <!-- Stanza 1 -->
+                        <div class="stanza" data-start="16">
+                            <p class="font-medium">Tangled up in empty sheets</p>
+                            <p class="font-medium">A million miles between heartbeats</p>
+                            <p class="font-medium">We say the words but kill the sound</p>
+                            <p class="font-medium">Just waiting till we hit the ground</p>
+                            <p class="chinese text-emerald-200/95 mt-5">糾纏在空蕩的枕衾，</p>
+                            <p class="chinese text-emerald-200/95">心跳之間是萬里的荒蕪。</p>
+                            <p class="chinese text-emerald-200/95">我們吐露著話語, 卻親手扼殺了迴響，</p>
+                            <p class="chinese text-emerald-200/95">只是靜靜等待墜地那一刻的荒涼。</p>
+                        </div>
+
+                        <!-- Stanza 2 -->
+                        <div class="stanza" data-start="30">
+                            <p class="font-medium">I can feel the static in the air</p>
+                            <p class="font-medium">Hanging by a thread we didn’t share</p>
+                            <p class="font-medium">Is it love or just the fear?</p>
+                            <p class="chinese text-emerald-200/95 mt-5">我能感覺到空氣中焦灼的靜電，</p>
+                            <p class="chinese text-emerald-200/95">懸於一線，那線頭卻不曾交疊。</p>
+                            <p class="chinese text-emerald-200/95">這究竟是愛，抑或只是恐懼？</p>
+                        </div>
+
+                        <!-- Stanza 3 -->
+                        <div class="stanza" data-start="44">
+                            <p class="font-medium">Are we holding on just to feel something?!</p>
+                            <p class="font-medium">Terrified of the quiet, the nothing!</p>
+                            <p class="font-medium">Drowning in the noise to escape the truth</p>
+                            <p class="font-medium">Burning through the wreckage of our youth!</p>
+                            <p class="chinese text-emerald-200/95 mt-5">難道我們緊握不放只為證明自己還有知覺？</p>
+                            <p class="chinese text-emerald-200/95">如此恐懼啊這死寂，這虛無！</p>
+                            <p class="chinese text-emerald-200/95">在喧囂中溺斃，只為逃離真相，</p>
+                            <p class="chinese text-emerald-200/95">在青春的殘骸裡，燃盡最後的光火。</p>
+                        </div>
+
+                        <!-- Stanza 4 -->
+                        <div class="stanza" data-start="77">
+                            <p class="font-medium">Just a whisper in the dark...</p>
+                            <p class="font-medium">Are we afraid to fall apart?</p>
+                            <p class="font-medium">Just a little something</p>
+                            <p class="font-medium">almost whisper in the dark…</p>
+                            <p class="chinese text-emerald-200/95 mt-5">不過是暗夜裡的一聲呢喃...</p>
+                            <p class="chinese text-emerald-200/95">我們是否竟如此害怕分崩離析？</p>
+                            <p class="chinese text-emerald-200/95">那微小的、幾乎在黑暗中消散的低語...</p>
+                        </div>
+
+                        <!-- Stanza 5 -->
+                        <div class="stanza" data-start="105">
+                            <p class="font-medium">Just a whisper in the dark...</p>
+                            <p class="font-medium">Are we afraid to fall apart?</p>
+                            <p class="font-medium">Just to feel something...</p>
+                            <p class="font-medium">The quiet, the nothing…</p>
+                            <p class="chinese text-emerald-200/95 mt-5">不過是暗夜裡的一聲呢喃...</p>
+                            <p class="chinese text-emerald-200/95">我們是否竟如此害怕分崩離析？</p>
+                            <p class="chinese text-emerald-200/95">只為了一絲知覺... 那死寂，那虛無。</p>
+                        </div>
+
+                        <!-- Stanza 6 -->
+                        <div class="stanza" data-start="135">
+                            <p class="font-medium">Just a ah……something ah….</p>
+                            <p class="font-medium">Just a whisper  …. Let out …</p>
+                            <p class="chinese text-emerald-200/95 mt-5">那聲... 破碎的嘆息...</p>
+                            <p class="chinese text-emerald-200/95">那聲... 被釋放的呢喃...</p>
+                        </div>
+
+                        <!-- Stanza 7 -->
+                        <div class="stanza" data-start="152">
+                            <p class="font-medium">Smooth clean finished</p>
+                            <p class="font-medium">And Crying lonely ….ah…..</p>
+                            <p class="chinese text-emerald-200/95 mt-5">收尾得如此圓潤乾淨徹底。</p>
+                            <p class="chinese text-emerald-200/95">徒留寂寞在低泣...</p>
+                        </div>
+
+                        <!-- Stanza 8 -->
+                        <div class="stanza" data-start="171">
+                            <p class="font-medium">Just a whisper in the dark...</p>
+                            <p class="font-medium">Are we afraid to fall apart?</p>
+                            <p class="font-medium">Just to feel something...</p>
+                            <p class="font-medium">The quiet, the nothing…</p>
+                            <p class="chinese text-emerald-200/95 mt-5">不過是暗夜裡的一聲呢喃...</p>
+                            <p class="chinese text-emerald-200/95">我們是否竟如此害怕分崩離析？</p>
+                            <p class="chinese text-emerald-200/95">只為了一絲知覺... 那死寂，那虛無。</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部資訊條 -->
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 glass px-7 py-3.5 rounded-3xl flex items-center gap-4 border border-white/10 text-sm shadow-xl">
+        <span class="text-emerald-400 text-xl">♫</span>
+        <span class="font-medium">現在播放</span>
+        <div class="h-px w-8 bg-white/30"></div>
+        <span class="text-white/70">Whisper In The Dark • mrhachimi</span>
+    </div>
+
+    <script>
+        const audio = document.getElementById('audio')
+        const playBtn = document.getElementById('play-btn')
+        const playIcon = document.getElementById('play-icon')
+        const progress = document.getElementById('progress')
+        const currentTimeEl = document.getElementById('current-time')
+        const durationEl = document.getElementById('duration')
+        const volumeSlider = document.getElementById('volume')
+        const albumContainer = document.getElementById('album-container')
+        const lyricsScroll = document.getElementById('lyrics-scroll')
+        const stanzas = document.querySelectorAll('.stanza')
+        
+        let isPlaying = false
+        let isRepeat = false
+        let isShuffle = false
+        let isLiked = false
+        let currentActive = -1
+
+        function formatTime(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00'
+            const min = Math.floor(seconds / 60)
+            const sec = Math.floor(seconds % 60)
+            return `${min}:${sec < 10 ? '0' : ''}${sec}`
+        }
+
+        function updateProgress() {
+            if (!audio.duration) return
+            const percent = (audio.currentTime / audio.duration) * 100
+            progress.value = percent
+            currentTimeEl.textContent = formatTime(audio.currentTime)
+
+            // Spotify 式歌詞高亮
+            let activeIndex = -1
+            for (let i = stanzas.length - 1; i >= 0; i--) {
+                const startTime = parseFloat(stanzas[i].dataset.start)
+                if (!isNaN(startTime) && audio.currentTime >= startTime) {
+                    activeIndex = i
+                    break
+                }
+            }
+
+            if (activeIndex !== currentActive) {
+                if (currentActive >= 0) stanzas[currentActive].classList.remove('active')
+                if (activeIndex >= 0) {
+                    stanzas[activeIndex].classList.add('active')
+                    stanzas[activeIndex].scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    })
+                }
+                currentActive = activeIndex
+            }
+        }
+
+        function togglePlay() {
+            if (audio.paused) {
+                audio.play().then(() => {
+                    isPlaying = true
+                    playIcon.classList.replace('fa-play', 'fa-pause')
+                    albumContainer.classList.add('playing')
+                }).catch(err => {
+                    console.error('Play failed:', err)
+                })
+            } else {
+                audio.pause()
+                isPlaying = false
+                playIcon.classList.replace('fa-pause', 'fa-play')
+                albumContainer.classList.remove('playing')
+            }
+        }
+
+        function toggleLike() {
+            isLiked = !isLiked
+            document.querySelector('#like-btn i').style.color = isLiked ? '#ef4444' : ''
+        }
+
+        function toggleRepeat() {
+            isRepeat = !isRepeat
+            document.getElementById('repeat-icon').style.color = isRepeat ? '#22c55e' : ''
+        }
+
+        function toggleShuffle() {
+            isShuffle = !isShuffle
+            document.querySelector('#shuffle-btn i').style.color = isShuffle ? '#22c55e' : ''
+        }
+
+        function prevTrack() { audio.currentTime = 0 }
+        function nextTrack() { audio.currentTime = audio.duration || 0 }
+
+        // 綁定事件
+        document.getElementById('play-btn').addEventListener('click', togglePlay)
+        document.getElementById('like-btn').addEventListener('click', toggleLike)
+        document.getElementById('repeat-btn').addEventListener('click', toggleRepeat)
+        document.getElementById('shuffle-btn').addEventListener('click', toggleShuffle)
+        document.getElementById('prev-btn').addEventListener('click', prevTrack)
+        document.getElementById('next-btn').addEventListener('click', nextTrack)
+        volumeSlider.addEventListener('input', () => { audio.volume = volumeSlider.value / 100 })
+        progress.addEventListener('input', () => {
+            if (audio.duration) audio.currentTime = (progress.value / 100) * audio.duration
+        })
+
+        audio.addEventListener('timeupdate', updateProgress)
+        audio.addEventListener('loadedmetadata', () => { durationEl.textContent = formatTime(audio.duration) })
+        audio.addEventListener('ended', () => {
+            if (isRepeat) {
+                audio.currentTime = 0
+                audio.play()
+            } else {
+                isPlaying = false
+                playIcon.classList.replace('fa-pause', 'fa-play')
+                albumContainer.classList.remove('playing')
+            }
+        })
+
+        document.addEventListener('keydown', e => {
+            if (e.code === 'Space') {
+                e.preventDefault()
+                togglePlay()
+            }
+        })
+
+        audio.volume = 0.8
+        console.log('%c✅ 手機端終極修復版已載入！\n布局適配+播放穩定\nmrhachimi - Whisper In The Dark', 'color:#22c55e; font-family:monospace')
+    </script>
+</body>
+</html>
