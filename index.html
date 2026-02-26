@@ -13,7 +13,7 @@
         
         html, body { 
             height: 100%;
-            overflow-x: hidden;  /* 只防橫向滾動 */
+            overflow-x: hidden;
         }
         
         body { 
@@ -111,7 +111,6 @@
 
             <div class="flex flex-col lg:flex-row gap-8 items-start">
 
-                <!-- 左側：頭像（已縮小） -->
                 <div class="lg:w-[26%] flex flex-col items-center lg:items-start text-center lg:text-left">
                     <div id="album-container" class="album-art w-56 h-56 lg:w-64 lg:h-64 rounded-3xl overflow-hidden shadow-2xl border-4 border-white/10 bg-zinc-900">
                         <img id="cover" src="avatar.jpg" alt="mrhachimi" class="w-full h-full object-cover">
@@ -130,7 +129,6 @@
                     </button>
                 </div>
 
-                <!-- 中間：播放控制（按鈕已縮小） -->
                 <div class="lg:w-[27%] glass rounded-3xl p-8 border border-white/10 shadow-2xl flex flex-col justify-center">
                     
                     <div class="mb-8">
@@ -172,10 +170,9 @@
                         <i class="fa-solid fa-volume-high text-zinc-400"></i>
                     </div>
 
-                    <audio id="audio" src="audio.mp3"></audio>
+                    <audio id="audio" src="audio.mp3" preload="auto" playsinline></audio>
                 </div>
 
-                <!-- 右側：歌詞（最大區域 + Spotify 式高亮） -->
                 <div class="lg:w-[47%] glass rounded-3xl p-8 border border-white/10 flex flex-col min-h-[300px]">
                     <div class="flex items-center justify-between mb-6">
                         <div class="flex items-center gap-3">
@@ -187,7 +184,6 @@
                     
                     <div id="lyrics-scroll" class="lyrics-container flex-1 overflow-y-auto pr-4 space-y-12 text-[17px] leading-relaxed min-h-[200px]">
                         
-                        <!-- Stanza 1 -->
                         <div class="stanza" data-start="16">
                             <p class="font-medium">Tangled up in empty sheets</p>
                             <p class="font-medium">A million miles between heartbeats</p>
@@ -199,7 +195,6 @@
                             <p class="chinese text-emerald-200/95">只是靜靜等待墜地那一刻的荒涼。</p>
                         </div>
 
-                        <!-- Stanza 2 -->
                         <div class="stanza" data-start="30">
                             <p class="font-medium">I can feel the static in the air</p>
                             <p class="font-medium">Hanging by a thread we didn’t share</p>
@@ -209,7 +204,6 @@
                             <p class="chinese text-emerald-200/95">這究竟是愛，抑或只是恐懼？</p>
                         </div>
 
-                        <!-- Stanza 3 -->
                         <div class="stanza" data-start="44">
                             <p class="font-medium">Are we holding on just to feel something?!</p>
                             <p class="font-medium">Terrified of the quiet, the nothing!</p>
@@ -221,7 +215,6 @@
                             <p class="chinese text-emerald-200/95">在青春的殘骸裡，燃盡最後的光火。</p>
                         </div>
 
-                        <!-- Stanza 4 -->
                         <div class="stanza" data-start="77">
                             <p class="font-medium">Just a whisper in the dark...</p>
                             <p class="font-medium">Are we afraid to fall apart?</p>
@@ -232,7 +225,6 @@
                             <p class="chinese text-emerald-200/95">那微小的、幾乎在黑暗中消散的低語...</p>
                         </div>
 
-                        <!-- Stanza 5 -->
                         <div class="stanza" data-start="105">
                             <p class="font-medium">Just a whisper in the dark...</p>
                             <p class="font-medium">Are we afraid to fall apart?</p>
@@ -243,7 +235,6 @@
                             <p class="chinese text-emerald-200/95">只為了一絲知覺... 那死寂，那虛無。</p>
                         </div>
 
-                        <!-- Stanza 6 -->
                         <div class="stanza" data-start="135">
                             <p class="font-medium">Just a ah……something ah….</p>
                             <p class="font-medium">Just a whisper  …. Let out …</p>
@@ -251,7 +242,6 @@
                             <p class="chinese text-emerald-200/95">那聲... 被釋放的呢喃...</p>
                         </div>
 
-                        <!-- Stanza 7 -->
                         <div class="stanza" data-start="152">
                             <p class="font-medium">Smooth clean finished</p>
                             <p class="font-medium">And Crying lonely ….ah…..</p>
@@ -259,7 +249,6 @@
                             <p class="chinese text-emerald-200/95">徒留寂寞在低泣...</p>
                         </div>
 
-                        <!-- Stanza 8 -->
                         <div class="stanza" data-start="171">
                             <p class="font-medium">Just a whisper in the dark...</p>
                             <p class="font-medium">Are we afraid to fall apart?</p>
@@ -276,7 +265,6 @@
         </div>
     </div>
 
-    <!-- 底部資訊條 -->
     <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 glass px-7 py-3.5 rounded-3xl flex items-center gap-4 border border-white/10 text-sm shadow-xl">
         <span class="text-emerald-400 text-xl">♫</span>
         <span class="font-medium">現在播放</span>
@@ -301,6 +289,7 @@
         let isShuffle = false
         let isLiked = false
         let currentActive = -1
+        let isAudioUnlocked = false; // 用於 iOS 點擊解鎖
 
         function formatTime(seconds) {
             if (!seconds || isNaN(seconds)) return '0:00'
@@ -315,7 +304,6 @@
             progress.value = percent
             currentTimeEl.textContent = formatTime(audio.currentTime)
 
-            // Spotify 式歌詞高亮
             let activeIndex = -1
             for (let i = stanzas.length - 1; i >= 0; i--) {
                 const startTime = parseFloat(stanzas[i].dataset.start)
@@ -338,20 +326,28 @@
             }
         }
 
-        function togglePlay() {
+        // 核心修正：優化後的播放控制邏輯
+        async function togglePlay() {
+            // 針對 iOS：首次點擊時強制載入並解鎖
+            if (!isAudioUnlocked) {
+                audio.load();
+                isAudioUnlocked = true;
+            }
+
             if (audio.paused) {
-                audio.play().then(() => {
-                    isPlaying = true
-                    playIcon.classList.replace('fa-play', 'fa-pause')
-                    albumContainer.classList.add('playing')
-                }).catch(err => {
-                    console.error('Play failed:', err)
-                })
+                try {
+                    await audio.play();
+                    isPlaying = true;
+                    playIcon.classList.replace('fa-play', 'fa-pause');
+                    albumContainer.classList.add('playing');
+                } catch (err) {
+                    console.error('播放失敗，請檢查路徑或手勢限制:', err);
+                }
             } else {
-                audio.pause()
-                isPlaying = false
-                playIcon.classList.replace('fa-pause', 'fa-play')
-                albumContainer.classList.remove('playing')
+                audio.pause();
+                isPlaying = false;
+                playIcon.classList.replace('fa-pause', 'fa-play');
+                albumContainer.classList.remove('playing');
             }
         }
 
@@ -373,20 +369,28 @@
         function prevTrack() { audio.currentTime = 0 }
         function nextTrack() { audio.currentTime = audio.duration || 0 }
 
-        // 綁定事件
-        document.getElementById('play-btn').addEventListener('click', togglePlay)
+        // 事件綁定
+        playBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            togglePlay();
+        });
+
         document.getElementById('like-btn').addEventListener('click', toggleLike)
         document.getElementById('repeat-btn').addEventListener('click', toggleRepeat)
         document.getElementById('shuffle-btn').addEventListener('click', toggleShuffle)
         document.getElementById('prev-btn').addEventListener('click', prevTrack)
         document.getElementById('next-btn').addEventListener('click', nextTrack)
+        
         volumeSlider.addEventListener('input', () => { audio.volume = volumeSlider.value / 100 })
         progress.addEventListener('input', () => {
             if (audio.duration) audio.currentTime = (progress.value / 100) * audio.duration
         })
 
         audio.addEventListener('timeupdate', updateProgress)
-        audio.addEventListener('loadedmetadata', () => { durationEl.textContent = formatTime(audio.duration) })
+        audio.addEventListener('loadedmetadata', () => { 
+            durationEl.textContent = formatTime(audio.duration) 
+        })
+        
         audio.addEventListener('ended', () => {
             if (isRepeat) {
                 audio.currentTime = 0
@@ -405,8 +409,9 @@
             }
         })
 
+        // 設定初始音量
         audio.volume = 0.8
-        console.log('%c✅ 手機端終極修復版已載入！\n布局適配+播放穩定\nmrhachimi - Whisper In The Dark', 'color:#22c55e; font-family:monospace')
+        console.log('%c✅ 手機端最終修正版已載入', 'color:#22c55e; font-weight:bold;');
     </script>
 </body>
 </html>
